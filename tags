@@ -1,0 +1,20 @@
+!_TAG_FILE_FORMAT	2	/extended format; --format=1 will not append ;" to lines/
+!_TAG_FILE_SORTED	1	/0=unsorted, 1=sorted, 2=foldcase/
+!_TAG_PROGRAM_AUTHOR	Darren Hiebert	/dhiebert@users.sourceforge.net/
+!_TAG_PROGRAM_NAME	Exuberant Ctags	//
+!_TAG_PROGRAM_URL	http://ctags.sourceforge.net	/official site/
+!_TAG_PROGRAM_VERSION	5.9~svn20110310	//
+data_to_tensor	test_sgd.lua	/^function data_to_tensor( data, dim1, dim2 )$/;"	f
+item_cos_sim	test_sgd.lua	/^function item_cos_sim(i2u_mask, user_len, item_len)$/;"	f
+local feval 	test_sgd.lua	/^	local feval = function(x)$/;"	f
+local fevalx 	batch_svd.lua	/^local fevalx = function(x)$/;"	f
+local fevaly 	batch_svd.lua	/^local fevaly = function(x)$/;"	f
+parse_file	test_sgd.lua	/^function parse_file(filename, format)$/;"	f
+parse_line	test_sgd.lua	/^function parse_line(line, format)$/;"	f
+rmse	test_sgd.lua	/^function rmse( pred, truth)$/;"	f
+self:gsub( pattern, function(c) fields[#fields+1] 	test_sgd.lua	/^	self:gsub( pattern, function(c) fields[#fields+1] = c end)$/;"	f
+split_dataset	test_sgd.lua	/^function split_dataset( set, user_len, item_len )$/;"	f
+string:split	test_sgd.lua	/^function string:split(sep)$/;"	f
+svd	test_sgd.lua	/^function svd(u2i_rating, user_len )$/;"	f
+user_cf	test_sgd.lua	/^function user_cf(set, user_len, item_len) 	$/;"	f
+user_cos_sim	test_sgd.lua	/^function user_cos_sim( u2i_mask, user_len, item_len )$/;"	f

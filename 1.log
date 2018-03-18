@@ -1,0 +1,34 @@
+ count:	6040	
+1	number	1	
+2	string	F	
+3	number	1	
+4	number	10	
+5	string	48067	
+ count:	3883	
+1	number	1	
+2	string	Toy Story (1995)	
+3	string	Animation|Children's|Comedy	
+max movie id:	3952	
+ count:	1000209	
+1	number	1	
+2	number	1193	
+3	number	5	
+4	string	978300760	
+Documentary	13	
+Crime	9	
+Mystery	16	
+Comedy	3	
+Animation	1	
+War	14	
+Thriller	10	
+Film-Noir	17	
+Action	8	
+Fantasy	5	
+Horror	11	
+Adventure	4	
+Romance	6	
+Western	18	
+Children's	2	
+Drama	7	
+Sci-Fi	12	
+Musical	15	
