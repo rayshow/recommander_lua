@@ -240,16 +240,32 @@ function item_cf(u2i_tbl, item_set, user_len, item_len)
     
 	print(" compute item heat")
 	local item_heat = u2i_tbl:clone():sum(1)
+	local weigth_heat = torch.Tensor( item_len, 2)
+	weigth_heat[{},1] = item_heat
 	
 	print(" compute user favor");
 	local Favor_TopK = 5
 	favor_lvs, favor_mids = u2m_tbl:topk(Favor_TopK, 2, true )
     
-	local 
+	local success_count = 0
+	local RMD_Count = 10
 	for i=1,user_len do
 		local user_faver_mids = favor_mids[i]	
-		local sum = item_heat[{ {}, user_favor_mids }]:sum()
+		local item_wight = i2m_tbl[{ {}, user_favor_mids }]:sum()
+		print(item_wight:size())
+		weight_heat[{},1] = item_wight
+		local _, rmd_ids = weight_heat:prod(1):topk(RMD_Count,2,true)
+		local j = 1
+		local find = false
+		while j< RMD_Count and not find do
+			if u2i_tbl[i][ rmd_ids[j] ] !=0 then
+				success_count = success_count + 1
+				find = true
+			end
+		end
 	end
+	print("precentage: ", success_count / user_len)
+
 end
 
 user_data = parse_file("ml-1m/users.dat", "isiis");
