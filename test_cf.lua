@@ -76,7 +76,7 @@ function svd(u2i_rating, user_len )
 end
 
 function data_to_tensor( data, dim1, dim2 )
-	local tbl = torch.Tensor( dim1, dim2);
+	local tbl = torch.Tensor( dim1, dim2):fill(0);
 	print( dim1, dim2)
 	for i=1,#data do
 		local item = data[i]
@@ -98,12 +98,15 @@ function split_dataset( u2i_tbl, user_len, item_len )
 	return ts_mask, 1 - ts_mask, ts_mask:typeAs(rands)
 end
 
+
 function split_u2i( u2i_tbl)
 	local sizes = u2i_tbl:size()
-	local rands = torch.rand( sizes[1] * sizes[2] ):resize( size[1], size[2] )
+	local rands = torch.rand( sizes[1] * sizes[2] ):resize( sizes[1], sizes[2] )
 	local ts_mask = rands:gt(0.2)
+	local rs_mask = 1 - ts_mask
 	local ts_tbl = ts_mask:float():cmul( u2i_tbl )
-	return ts_tbl, 1-ts_tbl
+	local rs_tbl = rs_mask:float():cmul( u2i_tbl )
+	return ts_tbl, rs_tbl
 end
 
 
@@ -146,7 +149,7 @@ function print_uim( u2m_tbl, i2m_tbl, mark_len, uid )
    print( 0, v2str( u2m_tbl[ uid ], mark_len )  )
 end
 
-function compute_user_marks( rating_data, item_data, user_len, item_len)
+function compute_user_marks( u2i_tbl, item_data, user_len, item_len)
    -- 1. collect total marks of item
    local mark_tbl = {}
    local count = 1
@@ -165,28 +168,30 @@ function compute_user_marks( rating_data, item_data, user_len, item_len)
    for k,v in pairs(mark_tbl) do
       print( k, v)
    end
-   
    local mark_len = count - 1
 
    -- 2. compute item's marks look table
    local i2m_tbl = torch.Tensor(item_len, mark_len):fill(0);
    for i=1, #item_data do
 	   local item_id = item_data[i][1]
-       
 	   if marks[item_id] then 
 		   for k,v in pairs(marks[item_id]) do
 			   i2m_tbl[ item_id ][ mark_tbl[v] ] = 1
+
 		   end
        end
    end
 
-   local u2m_tbl = torch.Tensor( user_len, mark_len):fill(0)
-   for k,v in pairs(rating_data) do
-	    local user_id = v[1]
-		local item_id = v[2]
-    	u2m_tbl[ user_id ]:add( i2m_tbl[ item_id ] )
-   end
-   print_uim( u2m_tbl, i2m_tbl, mark_len, 1)
+   --local u2m_tbl = torch.Tensor( user_len, mark_len):fill(0)
+   --for k,v in pairs(rating_data) do
+   --     local user_id = v[1]
+   -- 	local item_id = v[2]
+   -- 	u2m_tbl[ user_id ]:add( i2m_tbl[ item_id ] )
+   --end
+	
+   local u2m_tbl = u2i_tbl*i2m_tbl
+   --print_uim( u2m_tbl, i2m_tbl, mark_len, 1)
+
    return u2m_tbl, i2m_tbl, mark_tbl
 end
 
@@ -231,41 +236,65 @@ end
 function item_cf(u2i_tbl, item_set, user_len, item_len)
 	print(" compute user marks");
 
+	-- u2m_tbl is rating-weighted count of user-mark table
+	-- u2i_tbl is 0:1  item-mark table
+	-- marks is mark array
 	u2m_tbl, i2m_tbl, marks = compute_user_marks( 
-		rating_data, movie_data, user_len, item_len )
-    	
+		u2i_tbl, item_set, user_len, item_len )
+     
 	print("spliting dataset")
-	
-	ts_tbl, rs_tbl = split_dataset( u2i_tbl, user_len, item_len )
-    
+	-- ts_tbl is byte mask of 80% percentage of u2i_tbl
+	-- rs_tbl is byte mask of 20% percentage of u2i_tbl
+	ts_tbl, rs_tbl = split_u2i( u2i_tbl)   
+
 	print(" compute item heat")
-	local item_heat = u2i_tbl:clone():sum(1)
-	local weigth_heat = torch.Tensor( item_len, 2)
-	weigth_heat[{},1] = item_heat
-	
+	--item_heat is 1D vector for count user of specual item
+	local item_heat = ts_tbl:sum(1)
+	-- weight_heat[1] is item_heat
+	-- weight_head[2] is ready for weight
+	local weight_heat = torch.Tensor( 2, item_len)
+	weight_heat[{1, {}}] = item_heat
+   	
 	print(" compute user favor");
-	local Favor_TopK = 5
-	favor_lvs, favor_mids = u2m_tbl:topk(Favor_TopK, 2, true )
-    
+	local Favor_TopK = 3
+	-- favor_lvs  is the wights of special user's favor mark
+	-- favor_mids is the ids of special user's favor mark
+	_, favor_mids = u2m_tbl:topk(Favor_TopK, 2, true )
+   	
 	local success_count = 0
-	local RMD_Count = 10
+	local RMD_Count = 1
+	local item_mask = torch.Tensor( item_len);
+	local recommand = torch.Tensor( user_len ):fill(0)
 	for i=1,user_len do
-		local user_faver_mids = favor_mids[i]	
-		local item_wight = i2m_tbl[{ {}, user_favor_mids }]:sum()
-		print(item_wight:size())
-		weight_heat[{},1] = item_wight
+
+		local user_favor_mids = favor_mids[i] 
+		local item_weight = i2m_tbl:index( 2, user_favor_mids ):sum(2)
+		weight_heat[{2,{}}] = item_weight
 		local _, rmd_ids = weight_heat:prod(1):topk(RMD_Count,2,true)
+		if RMD_Count > 1 then
+			rmd_ids = rmd_ids:squeeze()
+		else
+			rmd_ids = rmd_ids[1]
+		end
+
 		local j = 1
 		local find = false
-		while j< RMD_Count and not find do
-			if u2i_tbl[i][ rmd_ids[j] ] !=0 then
-				success_count = success_count + 1
+		while not find do
+			if j <= RMD_Count then	
+			    
+				if rs_tbl[ { i, rmd_ids[j]} ] > 0.1 then
+					success_count = success_count + 1
+					find = true
+					recommand[i] = rmd_ids[j] 
+				end
+			else
 				find = true
 			end
+			j = j+1
 		end
 	end
 	print("precentage: ", success_count / user_len)
-
+	--print( v2str(recommand, user_len) )
 end
 
 user_data = parse_file("ml-1m/users.dat", "isiis");
@@ -280,7 +309,13 @@ print("max movie id:", max_movie_id)
 rating_data = parse_file("ml-1m/ratings.dat", "iiis");
 local user_len = #user_data;
 local item_len = max_movie_id;
+local u2i_tbl, u2i_mask  = data_to_tensor(rating_data, user_len, item_len) 
 
+--local test = torch.Tensor(10,10):fill(1)
+--local t1, t2 = split_u2i( test )
+
+--item_cf(u2i_tbl, movie_data, user_len,  item_len)
+item_cf( u2i_mask:float(), movie_data, user_len, item_len)
 
 --local x = torch.rand(user_len*item_len):resize(user_len,item_len):gt(0.90):float()
 --user_cf( x, user_len, item_len, 10,)
